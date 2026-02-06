@@ -1,0 +1,235 @@
+include:
+
+  - component: $CI_SERVER_FQDN/library/to-be-continuous/Docker/gitlab-ci-docker@master
+    inputs:
+    # Общее
+      build-tool: buildah
+      # TBC_DEFAULT_DOCKER_BUILD_TOOL: buildah
+#        - buildah                             
+#        - dind
+#        - kaniko
+#        - external                           # Собственная реализация
+#        - default
+    # file:                                   # Путь к Dockerfile def: Dockerfile
+    # context-path:                           # Директория с файлами, которые копируются в Image def: .
+      config-file: "/tmp/config.json"         # Путь к config.json (аутентификация в registry) def: .docker/config.json
+      release-image: "$CI_REGISTRY_IMAGE/buildah:$CI_COMMIT_REF_NAME"  # Путь релиза def: $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_NAME
+    #  DOCKER_REGISTRY_RELEASE_USER           # Учётные данные релиза ($CI_REGISTRY_USER)
+    #  DOCKER_REGISTRY_RELEASE_PASSWORD       # $CI_REGISTRY_PASSWORD
+
+      snapshot-image: "$CI_REGISTRY_IMAGE/buildah-snapshot:$CI_COMMIT_REF_SLUG"  # Промежуточный образ, используемый в том числе в роли кэша. Заменяет локальный кэш. def: $CI_REGISTRY_IMAGE/snapshot:$CI_COMMIT_REF_SLUG ($CI_COMMIT_REF_SLUG - общий на ветку)
+    #   DOCKER_REGISTRY_SNAPSHOT_USER         # Учётные данные снапшота ($CI_REGISTRY_USER)
+    #   DOCKER_REGISTRY_SNAPSHOT_PASSWORD     # $CI_REGISTRY_PASSWORD
+
+    # build-cache-disabled:                   # Отключение кэша (snapshot всё равно делается)
+    # metadata:                               # Ключи --label с метадатой. Пример: --label "org.opencontainers.image.url=${CI_PROJECT_URL}"
+      
+    # skopeo - Утилита для публикации образов. Срабатывает при релизе.
+    # publish-args:                           # Доп. аргументы skopeo
+      prod-publish-strategy: auto             # manual auto none def: manual
+
+    # Тэги
+    # release-extra-tags-pattern:             # Если основной тэг соответствует паттерну, то создаются алиасы (1; 1.1; latest) def: ^v?(?P<major>[0-9]+)\.(?P<minor>[0-9]+)\.(?P<patch>[0-9]+)(?P<suffix>(?P<prerelease>-[0-9A-Za-z-\.]+)?(?P<build>\+[0-9A-Za-z-\.]+)?)$
+      release-extra-tags: latest \g<major>.\g<minor> \g<major>  # Какие тэги создаются при соответствии паттерна def: ""
+      semrel-release-disabled: true           # Отключение ручного тега def: false
+    #   SEMREL_INFO_NEXT_VERSION              # env ручной версии.
+    
+    # --> BUILDAH <---
+    # buildah-image:                          # Образ 
+      build-args: "--format=docker"           # Доп. аргументы сборки утилиты buildah
+    # container-registries-config-file:       # Расположение файла управления репозитроиями registries.conf. (НЕ AUTH) Читать отдельно!
+    # push-args:                              # Доп аргументы docker push ДЛЯ snapshot-image
+    # build-cache-location:                   # Локальный кэш. Eсли пустое - snapshot-image/cache def: ""
+
+    # --> DIND <--
+    # dind-image:                             # Образ 
+    # build-args:                             # Доп. аргументы сборки утилиты dind
+    # push-args:                              # Доп аргументы docker push ДЛЯ snapshot-image
+    # registry-mirror:                        # Добавляет url зеркала для образов. (--registry-mirror) def: ""
+    #   DOCKER_REGISTRY_MIRROR_USER           # Учётные данные зеркала
+    #   DOCKER_REGISTRY_MIRROR_PASSWORD
+
+    # --> KANIKO <--
+    # kaniko-image:                           # Образ 
+    # build-args:                             # Доп. аргументы сборки утилиты kaniko
+    # build-cache-location:                   # Локальный кэш. Eсли пустое - snapshot-image/cache def: ""
+    # registry-mirror:                        # Добавляет url зеркала для образов. (--registry-mirror) def: ""
+    #   DOCKER_REGISTRY_MIRROR_USER           # Учётные данные зеркала
+    #   DOCKER_REGISTRY_MIRROR_PASSWORD
+
+
+    # hadolint - Lint файла Dockerfile
+    # hadolint-disabled:                      # def: false
+    # hadolint-args:                          # def: ''
+
+    # healthcheck - Запуск контейнера и проверка его состояния на healthy (управляется разделом HEALTHCHECK). Работает только с dind из-за Docker-in-Docker
+    # healthcheck-disabled:                   # def: false
+    # healthcheck-timeout:                    # Время ожидания старта def: 60
+    # healthcheck-options:                    # Аргументы docker run
+    # healthcheck-container-args:             # Аргументы для контейнера
+    
+    # trivy - Проверка контейнеров на уязвимости (по внешним базам данных)
+    # trivy-disabled:                         # def: false
+    # trivy-image:                            # def: docker.io/aquasec/trivy:latest
+    # trivy-args:                             # def: --ignore-unfixed --pkg-types os --exit-on-eol 1 --detection-priority comprehensive --disable-telemetry --skip-version-check
+
+    # sbom - отчёт о составе образа
+    # sbom-disabled:                          # def: false
+    # sbom-image:                             # def: docker.io/anchore/syft:debug
+    # sbom-opts:                              # def: --override-default-catalogers rpm-db-cataloger,alpm-db-cataloger,apk-db-cataloger,dpkg-db-cataloger,portage-cataloger --select-catalogers -file
+
+    # cosign - Включение в отчёт sbom электронной подписи образа.
+      cosign-strategy: always                 # Когда добавлять: never, onrelease, always. def: never
+      cosign-opts: "--verbose --registry-referrers-mode legacy"  # Аргументы утилиты cosign на этапе сборки образа. def: --tlog-upload=false --recursive
+      cosign-attest-opts: "--verbose"  # Аргументы утилиты cosign на этапе sbom. def: --tlog-upload=false
+    #  cosign-annotations: ""                     # Ключи --label с метадатой подписи. Пример: --annotations "com.gitlab.ci.project.path=$CI_PROJECT_URL"
+      cosign-dist-url: "https://github.com/sigstore/cosign/releases/download/v2.5.0/cosign-linux-amd64"                      # Откуда качать утилиту cosign def: ''
+
+  - component: $CI_SERVER_FQDN/library/cicd/extands/docker-image-healthcheck-test/remote-docker@main
+  - component: $CI_SERVER_FQDN/library/cicd/extands/docker-image-mirroring/docker-image-mirroring@main
+
+  - component: $CI_SERVER_FQDN/library/cicd/auto-release/auto-release@main
+    inputs:
+      auto-rebase: true
+      auto-approve: true
+
+      auto-merge: true
+      auto-remove-source-branch: true
+
+      auto-tag: false
+      auto-tag-pattern: '/^\d+\.\d+\.\d+$/'
+      auto-tag-version-major: 0
+      auto-tag-version-minor: 4
+
+      auto-release: true
+
+stages:
+  - build                                # docker-hadolint,
+  - package-build                        # docker-kaniko-build, docker-dind-build, docker-buildah-build
+  - package-test                         # docker-healthcheck, docker-trivy, docker-sbom
+  - publish                              # docker-publish
+
+  - auto-merge
+  - auto-tag
+  - auto-release
+
+.docker-base:
+  services:
+    - name: "$TBC_TRACKING_IMAGE"
+      command: ["--service", "docker", "8.0.10"]
+  before_script:
+    - !reference [.docker-scripts]
+  tags:
+    - docker-builder
+
+# docker-image-mirroring
+.docker-buildah-mirroring-needs:
+  - job: docker-publish
+
+# auto-release
+.auto-rebase-needs:
+  - job: docker-hadolint
+    optional: true
+  - job: docker-buildah-build
+    optional: true
+  - job: docker-healthcheck
+    optional: true
+  - job: docker-sbom
+    optional: true
+  - job: docker-trivy
+    optional: true
+  - job: docker-publish
+
+.auto-approve-needs:
+  - job: docker-hadolint
+    optional: true
+  - job: docker-buildah-build
+    optional: true
+  - job: docker-healthcheck
+    optional: true
+  - job: docker-sbom
+    optional: true
+  - job: docker-trivy
+    optional: true
+  - job: docker-publish
+
+.auto-merge-needs:
+  - job: docker-hadolint
+    optional: true
+  - job: docker-buildah-build
+    optional: true
+  - job: docker-healthcheck
+    optional: true
+  - job: docker-sbom
+    optional: true
+  - job: docker-trivy
+    optional: true
+  - job: docker-publish
+
+.auto-create-TAG-needs:
+  - job: docker-hadolint
+    optional: true
+  - job: docker-buildah-build
+    optional: true
+  - job: docker-healthcheck
+    optional: true
+  - job: docker-sbom
+    optional: true
+  - job: docker-trivy
+    optional: true
+  - job: docker-publish
+
+.auto-release-needs:
+  - job: docker-hadolint
+    optional: true
+  - job: generate_release_env_file
+  - job: docker-buildah-build
+    optional: true
+  - job: docker-healthcheck
+    optional: true
+  - job: docker-sbom
+    optional: true
+  - job: docker-trivy
+    optional: true
+  - job: docker-publish
+  - job: docker-buildah-mirroring
+    optional: true
+    
+generate_release_env_file:
+  stage: publish
+  image: registry.gitlab.com/gitlab-org/cli:latest
+  needs:
+    - job: docker-publish
+  before_script:
+    - !reference [ .install-utility ]
+  script:
+    - |
+      arg_image=$(printf '```bash\ndocker pull %s:%s\n```\n' \
+        "$CI_REGISTRY_IMAGE" "$docker_tag")
+
+      log_info "$arg_image"
+      
+      arg_latest=$(printf '```bash\ndocker pull %s:%s\n```\n---\n' \
+        "$CI_REGISTRY_IMAGE" "latest")
+      
+      log_info "$arg_latest"
+      
+      # Формируем release notes для образа docker
+      release_notes_docker=$(jq -n \
+        --arg head "Docker image" \
+        --arg image "$arg_image" \
+        --arg latest "$arg_latest" \
+        '{head: $head, image: $image, latest: $latest}' | base64 -w0
+      )
+
+      {
+        echo "release_notes_docker=$release_notes_docker"
+      } > release.env
+
+  rules:
+    - !reference [ .tagged, only ]
+    - when: on_success
+  artifacts:
+    reports:
+      dotenv: release.env
+  

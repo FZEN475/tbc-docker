@@ -1,93 +1,307 @@
-# tbc-docker
+## tbc-docker
 
+### Сравнение утилит.
 
+| Утилита | Безопасность                  | hadolint | healthcheck | trivy | sbom | cosign |
+|---------|-------------------------------|----------|-------------|-------|------|--------|
+| buildah | Требует прав на монтирование* | Да       | External**  | Да    | Да   | Да     |
+| dind    | --privileged                  | Да       | Да          | Да    | Да   | Да     |
+| kaniko  |                               | Да       | External**  | Да    | Да   | Да     |
 
-## Getting started
+`*` Сейчас отключается appArmor на runner (`"appArmorProfile": { "type": "Unconfined" }`) требуется разобраться с Подключением профилей и системными вызовами.  
+`**` Самостоятельная реализация job запуска контейнера.
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+### workflow.rules
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
-
-## Add your files
-
-* [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-* [Add files using the command line](https://docs.gitlab.com/topics/git/add_files/#add-files-to-a-git-repository) or push an existing Git repository with the following command:
+```yaml
+.tbc-workflow-rules:
+  skip-back-merge:                            # Не запускать при обратном MR (из прод в feature)
+  prefer-mr-pipeline:                         # => when: never
+    - это обычный commit в ветку
+    - и для этой ветки уже есть открытый MR
+    - и ветка не prod и не integration
+  extended-skip-ci:                           # Поиск в CI_COMMIT_MESSAGE паттерна [skip ci on ...]
+    - "*tag" && $CI_COMMIT_TAG                # Не запускать на тэге
+    - "*branch" && $CI_COMMIT_BRANCH          # Не запускать при обычном коммите
+    - "*mr" && $CI_MERGE_REQUEST_ID           # Не запускать при MR
+    - "*default" && $CI_COMMIT_REF_NAME =~ $CI_DEFAULT_BRANCH  # Не запускать на ветке по умолчанию
+    - "*prod" && $CI_COMMIT_REF_NAME =~ $PROD_REF  # Не запускать на продакшене
+    - "*integ" && $CI_COMMIT_REF_NAME =~ $INTEG_REF # Не запускать на интеграции
+    - "*dev" && $CI_COMMIT_REF_NAME !~ $PROD_REF && $CI_COMMIT_REF_NAME !~ $INTEG_REF # Не запускать на продакшене и интеграции
 
 ```
-cd existing_repo
-git remote add origin https://gitlab.fizn.ru/library/cicd/examples/tbc-docker.git
-git branch -M main
-git push -uf origin main
+
+### .test-policy
+Правила применения тестирования
+```yaml
+.test-policy:                                
+  - Это обычный commit -> on_success
+  - ADAPTIVE_PIPELINE_DISABLED == "true" -> on_success
+  - Ветка интеграции или релиза -> on_success
+  - Это не MR и нет открытых -> manual && allow_failure=true
+  - '$CI_MERGE_REQUEST_TITLE =~ /^Draft:.*/' ->  on_success && allow_failure=true
+  - on_success
 ```
 
-## Integrate with your tools
+### .delivery-policy
+Дополнительные правила при TBC_SBOM_MODE=onrelease
+```yaml
+.delivery-policy:
+  - Тэг соответствует паттерну -> on_success
+  - Ветка интеграции или релиза -> on_success
+```
 
-* [Set up project integrations](https://gitlab.fizn.ru/library/cicd/examples/tbc-docker/-/settings/integrations)
+### variables
+```yaml
+variables:
+  TBC_SBOM_MODE: "onrelease"
+  TBC_DEFAULT_DOCKER_BUILD_TOOL: buildah
+  # default production ref name (pattern)
+  PROD_REF: '/^(master|main)$/'
+  # default integration ref name (pattern)
+  INTEG_REF: '/^develop$/'
+  # default release tag name (pattern)
+  RELEASE_REF: '/^v?[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9\-\.]+)?(\+[a-zA-Z0-9\-\.]+)?$/'
 
-## Collaborate with your team
+```
 
-* [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-* [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-* [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-* [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-* [Set auto-merge](https://docs.gitlab.com/user/project/merge_requests/auto_merge/)
+### stages
 
-## Test and Deploy
+```yaml
+stages:
+  - build                                # docker-hadolint, 
+  - test                                 # Нет job
+  - package-build                        # docker-kaniko-build, docker-dind-build, docker-buildah-build
+  - package-test                         # docker-healthcheck, docker-trivy, docker-sbom
+  - infra                                # Нет job
+  - deploy                               # Нет job
+  - acceptance                           # Нет job
+  - publish                              # docker-publish
+  - infra-prod                           # Нет job
+  - production                           # Нет job
+```
 
-Use the built-in continuous integration in GitLab.
+### extends
 
-* [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/)
-* [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-* [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-* [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-* [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
+```yaml
+extends:
+  .docker-base:
+    .docker-kaniko-base:
+      docker-kaniko-build:
+    .docker-dind-base:
+    docker-hadolint:
+    docker-buildah-build:
+    docker-trivy:
+    docker-sbom:
+    docker-publish:
+```
+### buildah
 
-***
+#### --format
+По умолчанию собирает образы в формате OCI  
+Эта спецификация не поддерживает HEALTHCHECK, поэтому либо 
 
-# Editing this README
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
+### cosign
 
-## Suggestions for a good README
+Ключи генерируются один раз и подписывают все артефакты в registry.  
+#### key-based модель
+Проверка подписи возможна только с открытым ключом.
+Пример создания ключей:
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: cosign-test
+  namespace: gitlab
+spec:
+  restartPolicy: Never
+  containers:
+    - name: cosign
+      image: bitnami/cosign
+      command:
+        - /bin/sh
+        - -c
+        - sleep infinity
+      env:
+        - name: GITLAB_HOST
+          value: "https://gitlab.fizn.ru"
+        - name: COSIGN_PASSWORD
+          value: "123"
+      volumeMounts:
+        - name: signing-configs
+          mountPath: /signing_config_full.json
+          subPath: signing_config_full.json
+        - name: gitlab-ca
+          mountPath: /etc/ssl/certs/ca.crt
+          subPath: ca.crt
+          readOnly: true
+        - name: registry-secret
+          mountPath: /.docker/config.json
+          subPath: config.json
+  volumes:
+    - name: signing-configs
+      configMap:
+        name: signing-configs-cm
+        items:
+          - key: signing_config_full.json
+            path: signing_config_full.json
+    - name: gitlab-ca
+      secret:
+        secretName: cm-gitlab-tls
+        items:
+          - key: ca.crt
+            path: ca.crt
+    - name: registry-secret
+      secret:
+        secretName: gitlab-registry-access
+        items:
+          - key: .dockerconfigjson
+            path: config.json
+---
+apiVersion: v1
+data:
+  signing_config_full.json: |
+    {
+      "mediaType": "application/vnd.dev.sigstore.signingconfig.v0.2+json",
+      "caUrls": [
+        {
+          "url": "https://fulcio.sigstore.dev",
+          "majorApiVersion": 1,
+          "validFor": {
+            "start": "2022-04-13T20:06:15.000Z"
+          },
+          "operator": "sigstore.dev"
+        }
+      ],
+      "oidcUrls": [
+        {
+          "url": "https://oauth2.sigstore.dev/auth",
+          "majorApiVersion": 1,
+          "validFor": {
+            "start": "2022-04-13T20:06:15.000Z"
+          },
+          "operator": "sigstore.dev"
+        }
+      ],
+      "rekorTlogUrls": [
+        {
+          "url": "https://rekor.sigstore.dev",
+          "majorApiVersion": 1,
+          "validFor": {
+            "start": "2021-01-12T11:53:27.000Z"
+          },
+          "operator": "sigstore.dev"
+        }
+      ],
+      "tsaUrls": [
+        {
+          "url": "https://timestamp.sigstore.dev/api/v1/timestamp",
+          "majorApiVersion": 1,
+          "validFor": {
+            "start": "2025-07-04T00:00:00Z"
+          },
+          "operator": "sigstore.dev"
+        }
+      ],
+      "rekorTlogConfig": {
+        "selector": "ANY"
+      },
+      "tsaConfig": {
+        "selector": "ANY"
+      }
+    }
+kind: ConfigMap
+metadata:
+  name: signing-configs-cm
+  namespace: gitlab
+```
+```shell
+# Токен с правами на создание values в репозитории
+export GITLAB_TOKEN=glpat-
+# Команда создаёт values в репозитории, которыми подписывается хэш
+cosign --verbose generate-key-pair gitlab://<repo-id>
+# Выгрузка ключа
+cosign public-key --key gitlab://<repo-id> > cosign.pub
+# Прямая проверка 
+# --insecure-ignore-tlog=true - Игнорировать хранилище Rekor, если не использовалось (
+cosign verify --key gitlab://<repo-id> gitlab://<Образ>:<Тег или SHA>
+# По ключу
+cosign verify --key cosign.pub gitlab://<Образ>:<Тег или SHA>
 
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+cosign verify --insecure-ignore-tlog=true --key
+```
 
-## Name
-Choose a self-explaining name for your project.
+#### v2.5.0
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+Создаёт в registry sha256.*.att и sha256.*.sig подписи.
 
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
+#### v3.*.*
 
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+Хранит подписи в манифесте хэша, поэтому нет sha256.*.att и sha256.*.sig
 
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+На данный момент это ломает стандартный pipline gitlab на этапе docker-publish из-за:
+```shell
+skopeo copy ... "docker://${snapshot_repository}:${sha}.sig" "docker://${release_repository}:${sha}.sig"
+```
+Жесткая привязка ломает копирование.
 
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+### skopeo
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+Утилита для копирования образов в registry
 
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: skopeo-test
+  namespace: gitlab
+spec:
+  restartPolicy: Never
+  containers:
+    - name: skopeo
+      image: quay.io/containers/skopeo:latest
+      command:
+        - /bin/sh
+        - -c
+        - sleep infinity
+      env:
+        - name: GITLAB_HOST
+          value: "https://gitlab.fizn.ru"
+        - name: COSIGN_PASSWORD
+          value: "123"
+      volumeMounts:
+        - name: gitlab-ca
+          mountPath: /etc/ssl/certs/ca.crt
+          subPath: ca.crt
+          readOnly: true
+        - name: registry-secret
+          mountPath: /.docker/config.json
+          subPath: config.json
+  volumes:
+    - name: gitlab-ca
+      secret:
+        secretName: cm-gitlab-tls
+        items:
+          - key: ca.crt
+            path: ca.crt
+    - name: registry-secret
+      secret:
+        secretName: gitlab-registry-access
+        items:
+          - key: .dockerconfigjson
+            path: config.json
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
+```
 
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
+```shell
 
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+```
 
-## License
-For open source projects, say how it is licensed.
 
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+
+
+
+
+
