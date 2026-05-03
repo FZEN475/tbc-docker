@@ -85,6 +85,14 @@ include:
     #  cosign-annotations: ""                     # Ключи --label с метадатой подписи. Пример: --annotations "com.gitlab.ci.project.path=$CI_PROJECT_URL"
     #  cosign-dist-url: "https://github.com/sigstore/cosign/releases/download/v2.5.0/cosign-linux-amd64"                      # Откуда качать утилиту cosign def: ''
 
+  - component: $CI_SERVER_FQDN/library/cicd/templates/ci-remote-exec/docker-healthcheck@main
+    inputs:
+      docker-config-file: "/tmp/config.json"
+      stage: package-test
+      verification-image: "${docker_image_digest}"
+      docker-host: "tcp://192.168.2.129:2375"
+      global-registry-url: "gitlab-registry.fizn.ru"
+
 #  - component: $CI_SERVER_FQDN/library/cicd/extands/docker-image-healthcheck-test/remote-docker@main
 #  - component: $CI_SERVER_FQDN/library/cicd/extands/docker-image-mirroring/docker-image-mirroring@main
 #
