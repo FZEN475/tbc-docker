@@ -79,11 +79,11 @@ include:
     # sbom-opts:                              # def: --override-default-catalogers rpm-db-cataloger,alpm-db-cataloger,apk-db-cataloger,dpkg-db-cataloger,portage-cataloger --select-catalogers -file
 
     # cosign - Включение в отчёт sbom электронной подписи образа.
-      cosign-strategy: always                 # Когда добавлять: never, onrelease, always. def: never
-      cosign-opts: "--verbose --registry-referrers-mode legacy"  # Аргументы утилиты cosign на этапе сборки образа. def: --tlog-upload=false --recursive
-      cosign-attest-opts: "--verbose"  # Аргументы утилиты cosign на этапе sbom. def: --tlog-upload=false
+      cosign-strategy: never                 # Когда добавлять: never, onrelease, always. def: never
+    #  cosign-opts: "--verbose --registry-referrers-mode legacy"  # Аргументы утилиты cosign на этапе сборки образа. def: --tlog-upload=false --recursive
+    #  cosign-attest-opts: "--verbose"  # Аргументы утилиты cosign на этапе sbom. def: --tlog-upload=false
     #  cosign-annotations: ""                     # Ключи --label с метадатой подписи. Пример: --annotations "com.gitlab.ci.project.path=$CI_PROJECT_URL"
-      cosign-dist-url: "https://github.com/sigstore/cosign/releases/download/v2.5.0/cosign-linux-amd64"                      # Откуда качать утилиту cosign def: ''
+    #  cosign-dist-url: "https://github.com/sigstore/cosign/releases/download/v2.5.0/cosign-linux-amd64"                      # Откуда качать утилиту cosign def: ''
 
 #  - component: $CI_SERVER_FQDN/library/cicd/extands/docker-image-healthcheck-test/remote-docker@main
 #  - component: $CI_SERVER_FQDN/library/cicd/extands/docker-image-mirroring/docker-image-mirroring@main
