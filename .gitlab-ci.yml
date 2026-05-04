@@ -1,8 +1,8 @@
 
 include:
-  - local: '.gitlab-ci.docker-example.yml'
   - component: $CI_SERVER_FQDN/library/cicd/auto-gitlab/auto-release@main
-
+  - local: '.gitlab-ci.docker-example.yml'
+  
 variables:
   CI_DEBUG_TRACE: "false"
   CUSTOM_CA_CERTS: "$CI_SERVER_TLS_CA_FILE"
