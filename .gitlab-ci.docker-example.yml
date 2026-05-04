@@ -151,14 +151,17 @@ stages:
 .sign:oci-cosign:public:env-overwrite:
   - DOCKER_FILE_HASH=$(echo "$DOCKER_FILE" | md5sum | cut -d" " -f1)
   - SANITIZED_IMAGE=$(echo "${DOCKER_SNAPSHOT_IMAGE}" | tr '[:punct:]' '_')
-  - export COSIGN_ATTESTS="\
-    custom|reports/docker-hadolint-${DOCKER_FILE_HASH}.codeclimate.json;\
-    custom|reports/docker-healthcheck-report.log;\
-    cyclonedx|reports/docker-sbom-${SANITIZED_IMAGE}.cyclonedx.json;\
-    custom|reports/docker-sbom-${SANITIZED_IMAGE}.native.json;\
-    vuln|reports/docker-trivy-${SANITIZED_IMAGE}.native.json;\
-    vuln|reports/docker-trivy-${SANITIZED_IMAGE}.gitlab.json;\
-    custom|reports/docker-trivy-${SANITIZED_IMAGE}.gitlab-codequality.json"
+  - |
+    export COSIGN_ATTESTS="$(cat <<EOF
+    custom|reports/docker-hadolint-${DOCKER_FILE_HASH}.codeclimate.json;
+    custom|reports/docker-healthcheck-report.log;
+    cyclonedx|reports/docker-sbom-${SANITIZED_IMAGE}.cyclonedx.json;
+    custom|reports/docker-sbom-${SANITIZED_IMAGE}.native.json;
+    vuln|reports/docker-trivy-${SANITIZED_IMAGE}.native.json;
+    vuln|reports/docker-trivy-${SANITIZED_IMAGE}.gitlab.json;
+    custom|reports/docker-trivy-${SANITIZED_IMAGE}.gitlab-codequality.json
+    EOF
+    )"
 
 .sign:oci-cosign:public:extends:
   tags:
