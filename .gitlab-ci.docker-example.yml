@@ -164,6 +164,7 @@ stages:
     TRIVY_GITLAB=$(find reports -maxdepth 1 -type f -name 'docker-trivy-*.gitlab.json' | head -n1)
     TRIVY_CODEQUALITY=$(find reports -maxdepth 1 -type f -name 'docker-trivy-*.gitlab-codequality.json' | head -n1)
     HADOLINT=$(find reports -maxdepth 1 -type f -name 'docker-hadolint-*.codeclimate.json' | head -n1)
+    HEALTHCHECK="docker-healthcheck-report.log"
 
   - |
     [ -n "$SBOM_CYCLONEDX" ] || exit 1
