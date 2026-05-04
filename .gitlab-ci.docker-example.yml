@@ -149,19 +149,39 @@ stages:
 # sign/oci-cosign
 
 .sign:oci-cosign:public:env-overwrite:
-  - DOCKER_FILE_HASH=$(echo "$DOCKER_FILE" | md5sum | cut -d" " -f1)
-  - SANITIZED_IMAGE=$(echo "${DOCKER_SNAPSHOT_IMAGE}" | tr '[:punct:]' '_')
+  - |
+    SBOM_CYCLONEDX=$(find reports -maxdepth 1 -type f -name 'docker-sbom-*.cyclonedx.json' | head -n1)
+    SBOM_NATIVE=$(find reports -maxdepth 1 -type f -name 'docker-sbom-*.native.json' | head -n1)
+    TRIVY_NATIVE=$(find reports -maxdepth 1 -type f -name 'docker-trivy-*.native.json' | head -n1)
+    TRIVY_GITLAB=$(find reports -maxdepth 1 -type f -name 'docker-trivy-*.gitlab.json' | head -n1)
+    TRIVY_CODEQUALITY=$(find reports -maxdepth 1 -type f -name 'docker-trivy-*.gitlab-codequality.json' | head -n1)
+    HADOLINT=$(find reports -maxdepth 1 -type f -name 'docker-hadolint-*.codeclimate.json' | head -n1)
+
+  - |
+    [ -n "$SBOM_CYCLONEDX" ] || exit 1
+    [ -n "$SBOM_NATIVE" ] || exit 1
+    [ -n "$TRIVY_NATIVE" ] || exit 1
+    [ -n "$TRIVY_GITLAB" ] || exit 1
+    [ -n "$TRIVY_CODEQUALITY" ] || exit 1
+    [ -n "$HADOLINT" ] || exit 1
+      
   - COSIGN_ATTESTS="
-    custom|reports/docker-hadolint-${DOCKER_FILE_HASH}.codeclimate.json;
-    custom|reports/docker-healthcheck-report.log;
-    cyclonedx|reports/docker-sbom-${SANITIZED_IMAGE}.cyclonedx.json;
-    custom|reports/docker-sbom-${SANITIZED_IMAGE}.native.json;
-    vuln|reports/docker-trivy-${SANITIZED_IMAGE}.native.json;
-    vuln|reports/docker-trivy-${SANITIZED_IMAGE}.gitlab.json;
-    custom|reports/docker-trivy-${SANITIZED_IMAGE}.gitlab-codequality.json"
-  - COSIGN_ATTESTS=$(echo "$COSIGN_ATTESTS" | tr -d '\n'| tr -d ' ')
+    custom|${HADOLINT};
+    custom|reports/${HEALTHCHECK};
+    cyclonedx|${SBOM_CYCLONEDX};
+    custom|${SBOM_NATIVE};
+    vuln|${TRIVY_NATIVE};
+    vuln|${TRIVY_GITLAB};
+    custom|${TRIVY_CODEQUALITY}
+    "
+      
+  - COSIGN_ATTESTS=$(echo "$COSIGN_ATTESTS" | tr -d '\n')
   - echo $COSIGN_ATTESTS
   - ls -al reports/
+#
+#"reports/docker-sbom-gitlab-registry.gitlab.svc_5000_library_cicd_examples_tbc-docker_buildah-snapshot_0-0-11.cyclonedx.json"
+#"reports/docker-sbom-gitlab_registry_gitlab_svc_5000_library_cicd_examples_tbc_docker_buildah_snapshot_0_0_11.cyclonedx.json"
+
 
 .sign:oci-cosign:public:extends:
   tags:
