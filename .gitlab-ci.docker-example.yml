@@ -161,6 +161,7 @@ stages:
     custom|reports/docker-trivy-${SANITIZED_IMAGE}.gitlab-codequality.json"
   - COSIGN_ATTESTS=$(echo "$COSIGN_ATTESTS" | tr -d '\n'| tr -d ' ')
   - echo $COSIGN_ATTESTS
+  - ls -al reports/
 
 .sign:oci-cosign:public:extends:
   tags:
