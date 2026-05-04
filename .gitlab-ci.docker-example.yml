@@ -161,10 +161,6 @@ stages:
 
 .sign:oci-cosign:public:needs:
   - job: docker-publish
-  - job: docker-hadolint
-  - job: ci-remote-exec:docker-healthcheck:core
-  - job: docker-sbom
-  - job: docker-trivy
 
 
 ## docker-image-mirroring
