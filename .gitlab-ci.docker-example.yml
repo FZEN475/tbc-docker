@@ -89,7 +89,7 @@ include:
     inputs:
       docker-config-file: "/tmp/config.json"
       stage: package-test
-      verification-image: "${docker_image_digest}"
+      verified-image: "${docker_image_digest}"
       docker-host: "tcp://192.168.2.129:2375"
       global-registry-url: "gitlab-registry.fizn.ru"
 
