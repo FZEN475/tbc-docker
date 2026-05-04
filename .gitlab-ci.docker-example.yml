@@ -159,7 +159,8 @@ stages:
     vuln|reports/docker-trivy-${SANITIZED_IMAGE}.native.json;
     vuln|reports/docker-trivy-${SANITIZED_IMAGE}.gitlab.json;
     custom|reports/docker-trivy-${SANITIZED_IMAGE}.gitlab-codequality.json"
-  - COSIGN_ATTESTS=$(echo "$COSIGN_ATTESTS" | tr -d '\n')
+  - COSIGN_ATTESTS=$(echo "$COSIGN_ATTESTS" | tr -d '\n'| tr -d ' ')
+  - echo $COSIGN_ATTESTS
 
 .sign:oci-cosign:public:extends:
   tags:
