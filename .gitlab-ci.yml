@@ -9,13 +9,8 @@ variables:
   ADAPTIVE_PIPELINE_DISABLED: "true"
   
   DEFAULT_CA_CERTS: "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+    
+  # cosign auth for key=gitlab://
+  GITLAB_HOST: "${CI_SERVER_URL}"
+  GITLAB_TOKEN: "${SIGN_TOKEN}"
   
-  # Дополнительный job импортирует tls-combined.pem из $COSIGN_TLS_PATH и сохраняет в cache как $CI_COMMIT_REF_SLUG.key
-  COSIGN_PRIVATE_KEY: "gitlab://${CI_PROJECT_ID}"
-  COSIGN_PASSWORD: "$CI_COMMIT_REF_SLUG"
-  
-  DOCKER_MIRROR_REPO: "ghcr.io/fzen475/tbc-docker" #repository name must be lowercase
-  
-  # docker-image-healthcheck-test/remote-docker
-  DOCKER_HOST: "tcp://192.168.2.129:2375"
-  GLOBAL_REGISTRY_URL: "gitlab-registry.fizn.ru"

@@ -96,6 +96,7 @@ include:
   - component: $CI_SERVER_FQDN/library/cicd/templates/sign/oci-cosign@main
     inputs:
       stage: "publish"
+      docker-config-file: "/tmp/config.json"
       oci-image-ref: "${docker_image_digest}"
       cosign-key: "gitlab://$CI_PROJECT_ID"
       cosign-attests-list: >
