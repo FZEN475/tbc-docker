@@ -105,7 +105,7 @@ include:
       stage: "publish"
       src-auth-file: "/tmp/config.json"
       dest-auth-file: "/tmp/config.json"
-      src-oci-image: "${docker_image}"
+      src-oci-image: "${docker_repository}"
       dest-oci-image: "ghcr.io/fzen475/tbc-docker"
 
 #  - component: $CI_SERVER_FQDN/library/cicd/extands/docker-image-healthcheck-test/remote-docker@main
@@ -204,9 +204,6 @@ stages:
   - job: docker-trivy
 
 # mirroring/oci-repository
-.mirroring:oci-repository:public:env-overwrite:
-  - |
-    true
 
 .mirroring:oci-repository:public:needs:
   - job: docker-publish
