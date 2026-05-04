@@ -23,7 +23,7 @@
 | publish|skopeo | |
 
 dockerfile_hash=$(echo "$DOCKER_FILE" | md5sum | cut -d" " -f1)
-reports/docker-hadolint-${dockerfile_hash}.codeclimate.json
+reports/docker-hadolint-$(echo "$DOCKER_FILE" | md5sum | cut -d" " -f1).codeclimate.json
 
 
 ---

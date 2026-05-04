@@ -93,6 +93,20 @@ include:
       docker-host: "tcp://192.168.2.129:2375"
       global-registry-url: "gitlab-registry.fizn.ru"
 
+  - component: $CI_SERVER_FQDN/library/cicd/templates/sign/oci-cosign@main
+    inputs:
+      stage: "publish"
+      oci-image-ref: "${docker_image_digest}"
+      cosign-key: "gitlab://$CI_PROJECT_ID"
+      cosign-attests-list: >
+        custom|reports/docker-hadolint-$(echo "$DOCKER_FILE" | md5sum | cut -d" " -f1).codeclimate.json;
+        custom|reports/docker-healthcheck-report.log;
+        cyclonedx|reports/docker-sbom-$(echo "${DOCKER_SNAPSHOT_IMAGE}" | tr '[:punct:]' '_').cyclonedx.json;
+        custom|reports/docker-sbom-$(echo "${DOCKER_SNAPSHOT_IMAGE}" | tr '[:punct:]' '_').native.json;
+        vuln|reports/docker-trivy-$(echo "${DOCKER_SNAPSHOT_IMAGE}" | tr '[:punct:]' '_').native.json;
+        vuln|reports/docker-trivy-$(echo "${DOCKER_SNAPSHOT_IMAGE}" | tr '[:punct:]' '_').gitlab.json;
+        custom|reports/docker-trivy-$(echo "${DOCKER_SNAPSHOT_IMAGE}" | tr '[:punct:]' '_').gitlab-codequality.json;
+
 #  - component: $CI_SERVER_FQDN/library/cicd/extands/docker-image-healthcheck-test/remote-docker@main
 #  - component: $CI_SERVER_FQDN/library/cicd/extands/docker-image-mirroring/docker-image-mirroring@main
 #
@@ -138,6 +152,20 @@ stages:
 
 .ci-remote-exec:docker-healthcheck:public:needs:
   - job: docker-buildah-build
+
+# sign/oci-cosign
+
+.sign:oci-cosign:public:extends:
+  tags:
+    - docker-builder
+
+.sign:oci-cosign:public:needs:
+  - job: docker-publish
+  - job: docker-hadolint
+  - job: ci-remote-exec:docker-healthcheck:core
+  - job: docker-sbom
+  - job: docker-trivy
+
 
 ## docker-image-mirroring
 #.docker-buildah-mirroring-needs:
