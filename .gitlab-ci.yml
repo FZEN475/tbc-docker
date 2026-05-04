@@ -21,7 +21,6 @@ variables:
   - job: sign:oci-cosign:core
   - job: mirroring:oci-repository:core
 
-
 .utils:toolkit:shared:auto-release-RELEASE-md:
   - docker_image="${docker_image/$CI_REGISTRY/gitlab-registry.fizn.ru}"
   - |
