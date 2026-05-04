@@ -159,8 +159,8 @@ stages:
   tags:
     - docker-builder
 
-.sign:oci-cosign:public:needs:
-  - job: docker-publish
+#.sign:oci-cosign:public:needs:
+#  - job: docker-publish
 
 
 ## docker-image-mirroring
