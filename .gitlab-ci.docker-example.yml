@@ -149,7 +149,6 @@ stages:
 # sign/oci-cosign
 
 .sign:oci-cosign:public:env-overwrite:
-  - OCI_IMAGE_REF="$[[ inputs.oci-image-ref ]]"
   - DOCKER_FILE_HASH=$(echo "$DOCKER_FILE" | md5sum | cut -d" " -f1)
   - SANITIZED_IMAGE=$(echo "${DOCKER_SNAPSHOT_IMAGE}" | tr '[:punct:]' '_')
   - export COSIGN_ATTESTS="\
