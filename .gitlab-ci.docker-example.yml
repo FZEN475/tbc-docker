@@ -130,6 +130,15 @@ stages:
   tags:
     - docker-builder
 
+# ci-remote-exec/docker-healthcheck
+
+.ci-remote-exec:docker-healthcheck:public:extends:
+  tags:
+    - docker-builder
+
+.ci-remote-exec:docker-healthcheck:public:needs:
+  - job: docker-buildah-build
+
 ## docker-image-mirroring
 #.docker-buildah-mirroring-needs:
 #  - job: docker-publish
