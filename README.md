@@ -25,22 +25,15 @@
 | `publish`       | `cosign`                 | Модуль `oci-cosign`         |
 | `publish`       | `skopeo`                 |                             |
 
-dockerfile_hash=$(echo "$DOCKER_FILE" | md5sum | cut -d" " -f1)
-reports/docker-hadolint-$(echo "$DOCKER_FILE" | md5sum | cut -d" " -f1).codeclimate.json
 
 
 ---
 
-reports/docker-healthcheck-report.log
+
 
 ---
-docker_image=gitlab-registry.gitlab.svc:5000/library/cicd/examples/tbc-docker/buildah-snapshot:main
-docker_image_digest=gitlab-registry.gitlab.svc:5000/library/cicd/examples/tbc-docker/buildah-snapshot@sha256:f479853f593ec5dfcbef04d2bcf969a6c9438fa920b4df5545e652aca19c8a11export docker_repository=$'\''gitlab-registry.gitlab.svc:5000/library/cicd/examples/tbc-docker/buildah-snapshot'\''
-docker_repository=gitlab-registry.gitlab.svc:5000/library/cicd/examples/tbc-docker/buildah-snapshot
-docker_tag=main
-docker_digest=sha256:f479853f593ec5dfcbef04d2bcf969a6c9438fa920b4df5545e652aca19c8a11
 
-gitlab-registry.gitlab.svc:5000/library/cicd/examples/tbc-docker/buildah:0.0.14
+
 ### buildah
 
 #### --format
@@ -56,7 +49,11 @@ gitlab-registry.gitlab.svc:5000/library/cicd/examples/tbc-docker/buildah:0.0.14
 
 
 
-
+docker_image=gitlab-registry.gitlab.svc:5000/library/cicd/examples/tbc-docker/buildah-snapshot:main
+docker_image_digest=gitlab-registry.gitlab.svc:5000/library/cicd/examples/tbc-docker/buildah-snapshot@sha256:f479853f593ec5dfcbef04d2bcf969a6c9438fa920b4df5545e652aca19c8a11export docker_repository=$'\''gitlab-registry.gitlab.svc:5000/library/cicd/examples/tbc-docker/buildah-snapshot'\''
+docker_repository=gitlab-registry.gitlab.svc:5000/library/cicd/examples/tbc-docker/buildah-snapshot
+docker_tag=main
+docker_digest=sha256:f479853f593ec5dfcbef04d2bcf969a6c9438fa920b4df5545e652aca19c8a11
 
 
 
