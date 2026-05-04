@@ -108,33 +108,13 @@ include:
       src-oci-image: "${docker_repository}"
       dest-oci-image: "ghcr.io/fzen475/tbc-docker"
 
-#  - component: $CI_SERVER_FQDN/library/cicd/extands/docker-image-healthcheck-test/remote-docker@main
-#  - component: $CI_SERVER_FQDN/library/cicd/extands/docker-image-mirroring/docker-image-mirroring@main
-#
-#  - component: $CI_SERVER_FQDN/library/cicd/auto-release/auto-release@main
-#    inputs:
-#      auto-rebase: true
-#      auto-approve: true
-#
-#      auto-merge: true
-#      auto-remove-source-branch: true
-#
-#      auto-tag: false
-#      auto-tag-pattern: '/^\d+\.\d+\.\d+$/'
-#      auto-tag-version-major: 0
-#      auto-tag-version-minor: 4
-#
-#      auto-release: true
-
 stages:
   - build                                # docker-hadolint,
   - package-build                        # docker-kaniko-build, docker-dind-build, docker-buildah-build
   - package-test                         # docker-healthcheck, docker-trivy, docker-sbom
   - publish                              # docker-publish
 
-#  - auto-merge
-#  - auto-tag
-#  - auto-release
+  - auto-gitlab
 
 .docker-base:
   services:
@@ -146,7 +126,6 @@ stages:
     - docker-builder
 
 # ci-remote-exec/docker-healthcheck
-
 .ci-remote-exec:docker-healthcheck:public:extends:
   tags:
     - docker-builder
@@ -155,7 +134,6 @@ stages:
   - job: docker-buildah-build
 
 # sign/oci-cosign
-
 .sign:oci-cosign:public:env-overwrite:
   - |
     SBOM_CYCLONEDX=$(find reports -maxdepth 1 -type f -name 'docker-sbom-*.cyclonedx.json' | head -n1)
@@ -187,10 +165,6 @@ stages:
   - COSIGN_ATTESTS=$(echo "$COSIGN_ATTESTS" | tr -d '\n' | tr -d ' ')
   - echo $COSIGN_ATTESTS
   - ls -al reports/
-#
-#"reports/docker-sbom-gitlab-registry.gitlab.svc_5000_library_cicd_examples_tbc-docker_buildah-snapshot_0-0-11.cyclonedx.json"
-#"reports/docker-sbom-gitlab_registry_gitlab_svc_5000_library_cicd_examples_tbc_docker_buildah_snapshot_0_0_11.cyclonedx.json"
-
 
 .sign:oci-cosign:public:extends:
   tags:
@@ -204,7 +178,6 @@ stages:
   - job: docker-trivy
 
 # mirroring/oci-repository
-
 .mirroring:oci-repository:public:needs:
   - job: docker-publish
   - job: docker-hadolint
@@ -216,115 +189,3 @@ stages:
 .mirroring:oci-repository:public:extends:
   tags:
     - docker-builder
-
-## docker-image-mirroring
-#.docker-buildah-mirroring-needs:
-#  - job: docker-publish
-#
-## auto-release
-#.auto-rebase-needs:
-#  - job: docker-hadolint
-#    optional: true
-#  - job: docker-buildah-build
-#    optional: true
-#  - job: docker-healthcheck
-#    optional: true
-#  - job: docker-sbom
-#    optional: true
-#  - job: docker-trivy
-#    optional: true
-#  - job: docker-publish
-#
-#.auto-approve-needs:
-#  - job: docker-hadolint
-#    optional: true
-#  - job: docker-buildah-build
-#    optional: true
-#  - job: docker-healthcheck
-#    optional: true
-#  - job: docker-sbom
-#    optional: true
-#  - job: docker-trivy
-#    optional: true
-#  - job: docker-publish
-#
-#.auto-merge-needs:
-#  - job: docker-hadolint
-#    optional: true
-#  - job: docker-buildah-build
-#    optional: true
-#  - job: docker-healthcheck
-#    optional: true
-#  - job: docker-sbom
-#    optional: true
-#  - job: docker-trivy
-#    optional: true
-#  - job: docker-publish
-#
-#.auto-create-TAG-needs:
-#  - job: docker-hadolint
-#    optional: true
-#  - job: docker-buildah-build
-#    optional: true
-#  - job: docker-healthcheck
-#    optional: true
-#  - job: docker-sbom
-#    optional: true
-#  - job: docker-trivy
-#    optional: true
-#  - job: docker-publish
-#
-#.auto-release-needs:
-#  - job: docker-hadolint
-#    optional: true
-#  - job: generate_release_env_file
-#  - job: docker-buildah-build
-#    optional: true
-#  - job: docker-healthcheck
-#    optional: true
-#  - job: docker-sbom
-#    optional: true
-#  - job: docker-trivy
-#    optional: true
-#  - job: docker-publish
-#  - job: docker-buildah-mirroring
-#    optional: true
-#
-#generate_release_env_file:
-#  stage: publish
-#  image: registry.gitlab.com/gitlab-org/cli:latest
-#  needs:
-#    - job: docker-publish
-#  before_script:
-#    - !reference [ .install-utility ]
-#  script:
-#    - |
-#      arg_image=$(printf '```bash\ndocker pull %s:%s\n```\n' \
-#        "$CI_REGISTRY_IMAGE" "$docker_tag")
-#
-#      log_info "$arg_image"
-#
-#      arg_latest=$(printf '```bash\ndocker pull %s:%s\n```\n---\n' \
-#        "$CI_REGISTRY_IMAGE" "latest")
-#
-#      log_info "$arg_latest"
-#
-#      # Формируем release notes для образа docker
-#      release_notes_docker=$(jq -n \
-#        --arg head "Docker image" \
-#        --arg image "$arg_image" \
-#        --arg latest "$arg_latest" \
-#        '{head: $head, image: $image, latest: $latest}' | base64 -w0
-#      )
-#
-#      {
-#        echo "release_notes_docker=$release_notes_docker"
-#      } > release.env
-#
-#  rules:
-#    - !reference [ .tagged, only ]
-#    - when: on_success
-#  artifacts:
-#    reports:
-#      dotenv: release.env
-  

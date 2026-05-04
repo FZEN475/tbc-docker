@@ -2,6 +2,10 @@
 
 Пример применения полного цикла CI для Docker image.
 
+---
+
+## Description
+
 Используемые Gitlab CI Template:
 
 | Name                    | Module             | URL                                                                                                   |
@@ -11,49 +15,18 @@
 | `sign`                    | `oci-cosign`         | [sign/oci-cosign](https://gitlab.fizn.ru/library/cicd/templates/sign.git)                             |
 | `mirroring`               | `oci-repository`     | [mirroring/oci-repository](https://gitlab.fizn.ru/library/cicd/templates/mirroring.git)               |
 
----
+Отчёт по анализу работы [tbc-docker](tbc-docker.md) и пояснения к [inputs](./.gitlab-ci.docker-example.yml).
 
-## 
+Заметки при настройке [buildah](./buildah.md).
 
 | Stage           | Utility / Implementation | Notes                       |
 |-----------------|--------------------------|-----------------------------|
 | `build`         | hadolint                 |                             |
 | `package-build` | [buildah](./buildah.md)  |                             |
 | `package-test`  | `healthcheck`            | Модуль `docker-healthcheck` |
-| `package-test`  | `trivy`                  |
-| `package-test`  | `sbom`                   |
+| `package-test`  | `trivy`                  |                             |
+| `package-test`  | `sbom`                   |                             |
 | `publish`       | `cosign`                 | Модуль `oci-cosign`         |
 | `publish`       | `skopeo`                 |                             |
-
-
-
 ---
-
-
-
----
-
-
-### buildah
-
-#### --format
-По умолчанию собирает образы в формате OCI  
-Эта спецификация не поддерживает HEALTHCHECK, поэтому либо 
-
-
-```
-
-```shell
-
-```
-
-
-
-docker_image=gitlab-registry.gitlab.svc:5000/library/cicd/examples/tbc-docker/buildah-snapshot:main
-docker_image_digest=gitlab-registry.gitlab.svc:5000/library/cicd/examples/tbc-docker/buildah-snapshot@sha256:f479853f593ec5dfcbef04d2bcf969a6c9438fa920b4df5545e652aca19c8a11export docker_repository=$'\''gitlab-registry.gitlab.svc:5000/library/cicd/examples/tbc-docker/buildah-snapshot'\''
-docker_repository=gitlab-registry.gitlab.svc:5000/library/cicd/examples/tbc-docker/buildah-snapshot
-docker_tag=main
-docker_digest=sha256:f479853f593ec5dfcbef04d2bcf969a6c9438fa920b4df5545e652aca19c8a11
-
-
 

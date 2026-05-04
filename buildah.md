@@ -16,10 +16,7 @@
 
 [gitlab-runner-docker-builder]()
 
-### buildah
-
-#### --format
+## HEALTHCHECK
 По умолчанию собирает образы в формате OCI  
-Эта спецификация не поддерживает HEALTHCHECK, поэтому либо
-
---format=docker
+Эта спецификация не поддерживает HEALTHCHECK, поэтому добавлен параметр:
+`build-args: "--format=docker"`
