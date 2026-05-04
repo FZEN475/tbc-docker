@@ -100,6 +100,14 @@ include:
       oci-image-ref: "${docker_image_digest}"
       cosign-key: "gitlab://$CI_PROJECT_ID"
 
+  - component: $CI_SERVER_FQDN/library/cicd/templates/mirroring/oci-repository@main
+    inputs:
+      stage: "publish"
+      src-auth-file: "/tmp/config.json"
+      dest-auth-file: "/tmp/config.json"
+      src-oci-image: "${docker_image}"
+      dest-oci-image: "ghcr.io/fzen475/tbc-docker"
+
 #  - component: $CI_SERVER_FQDN/library/cicd/extands/docker-image-healthcheck-test/remote-docker@main
 #  - component: $CI_SERVER_FQDN/library/cicd/extands/docker-image-mirroring/docker-image-mirroring@main
 #
@@ -175,7 +183,7 @@ stages:
     custom|${TRIVY_CODEQUALITY}
     "
       
-  - COSIGN_ATTESTS=$(echo "$COSIGN_ATTESTS" | tr -d '\n')
+  - COSIGN_ATTESTS=$(echo "$COSIGN_ATTESTS" | tr -d '\n' | tr -d ' ')
   - echo $COSIGN_ATTESTS
   - ls -al reports/
 #
@@ -194,6 +202,22 @@ stages:
   - job: docker-sbom
   - job: docker-trivy
 
+# mirroring/oci-repository
+.mirroring:oci-repository:public:env-overwrite:
+  - |
+    true
+
+.mirroring:oci-repository:public:needs:
+  - job: docker-publish
+  - job: docker-hadolint
+  - job: ci-remote-exec:docker-healthcheck:core
+  - job: docker-sbom
+  - job: docker-trivy
+  - job: sign:oci-cosign:core
+
+.mirroring:oci-repository:public:extends:
+  tags:
+    - docker-builder
 
 ## docker-image-mirroring
 #.docker-buildah-mirroring-needs:
